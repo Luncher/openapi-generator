@@ -1,5 +1,5 @@
-const debug = require('debug')('swagger-test:parser')
 const YamlParser = require('js-yaml')
+const debug = require('debug')('swagger-test:parser')
 
 //refs http://swagger.io/specification/
 const SWAGGER_VERSION = "2.0"
@@ -15,7 +15,7 @@ function SWaggerGenerate (options) {
 }
 
 SWaggerGenerate.prototype.init = function () {
-  this.configure = {} 
+  this.configure = {}
   this.configure.tags = []
   this.configure.paths = {}
   this.configure.definitions = {}
@@ -97,6 +97,10 @@ SWaggerGenerate.prototype.run = function (adapter, onDone) {
     return definition
   }
 
+  function setProperty (k, v) {
+    return that.set(k, v)
+  }
+
   function callOnDone (err) {
     if (err) {
       onDone(err)
@@ -107,12 +111,15 @@ SWaggerGenerate.prototype.run = function (adapter, onDone) {
     }
   }
 
-  adapter.parse(callOnCreateTag, 
-    callOnCreatePath, 
-    callOnCreateAction,
-    callOnCreateSecurityDefinition,
-    callOnCreateDefinition, 
-    callOnDone)
+  adapter.parse({
+    createTag: callOnCreateTag,
+    createPath: callOnCreatePath,
+    createAction: callOnCreateAction,
+    createSecrity: callOnCreateSecurityDefinition,
+    createDefinition: callOnCreateDefinition,
+    setProperty,    
+    callOnDone
+  })
 
   return
 }
@@ -135,7 +142,7 @@ SWaggerGenerate.Path.prototype.toJSON = function () {
   const actions = this.actions.reduce((acc, action) => {
     return Object.assign(acc, action.toJSON())
   }, {})
-  return { [this.name]: actions }
+  return { ["/" + this.name]: actions }
 }
 
 SWaggerGenerate.Action = function (options) {
@@ -154,7 +161,7 @@ SWaggerGenerate.Action = function (options) {
 SWaggerGenerate.Action.prototype.addParameter = function (options) {
   const params = {
     in: options.in || 'body',
-    name: options.name,
+    verb: options.verb,
     description: options.description || "",
     required: options.required,
     schema: options.schema,
@@ -180,7 +187,7 @@ SWaggerGenerate.Action.prototype.addSecurity = function (options) {
 
 SWaggerGenerate.Action.prototype.toJSON = function () {
   return {
-    [this.name]: {
+    [this.verb]: {
       tags:  this.tags,
       summary: this.summary,
       description: this.description,
@@ -221,6 +228,8 @@ SWaggerGenerate.Definition = function (options) {
   this.name = options.name
   this.type = options.type
   this.properties = options.properties || {}
+
+  return this
 }
 
 SWaggerGenerate.Definition.prototype.addProperty = function (options) {
