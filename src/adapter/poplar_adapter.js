@@ -1,16 +1,24 @@
 const assert = require('assert')
 const config = require('../config');
 const Entity = require('poplar').Entity
+const debug = require('debug')('openapi:adapter:poplar')
 
-function PoplarSwaggerAdapter (APIRouter) {
-  this.APIRouter = APIRouter
+function PoplarSwaggerAdapter (options) {
+  this.options = options
+  this.APIRouter = options.APIRouter
 }
 
-PoplarSwaggerAdapter.prototype.parseResponse = function (method, options) {
+PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
   const responses = Object.assign({}, config.DEFAULT_RESPONSE)
   const entity = method.presenter || (method.notes && method.notes.entity)
   const schema = method.notes && method.notes.schema
   // assert(Entity.isEntity(entity), 'presenter or notes.entity must be a valid Entity');
+
+  if (!schema || !entity) {
+    debug('using default response')
+    return responses
+  }
+
   const excepts = entity._excepts.slice()
   const exposes = entity._mappings
   const definition = {
@@ -57,7 +65,7 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, options) {
   }
 
   //TODO parse nested array 、 object、entity using
-  options.createDefinition(definition)
+  parser.createDefinition(definition)
 
   return Object.assign(responses, resp)
 }
@@ -65,59 +73,64 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, options) {
 /**
  * 把response 的entity信息添加到method.notes里面
  */
-PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, options) {
+PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
   const config = {
     tags,
     summary: method.name,
     description: method.name,
     verb: method.http.verb,
+    name: method.http.verb,
     operationId: method.http.path
   }
-  const { createAction, createPath } = options  
-  const pathName = '/' + method._apiBuilder.name + '/' + config.operationId
-  const path = createPath({ name: pathName })
-
-  const paramsIn = config.verb === 'GET' ? 'query' : 'body';      
+  const pathName = '/' + method._apiBuilder.name + 
+    (config.operationId ? ('/' + config.operationId) : '')
+  const path = parser.createPath({ name: pathName })
+  const paramsIn = config.verb.toLowerCase() === 'get' ? 'query' : 'body';
   config.consumes = config.DEFAULT_CONSUMES
   config.produces = config.DEFAULT_PRODUCES
   config.parameters = method.accepts.map(paramter => {
-    return {
+    const conf = {
       in: paramsIn,
       name: paramter.arg,
-      type: paramter.type,
       description: paramter.description || "",
-      schema: paramter.entity ? {"$ref": "#/definitions/" + paramter.entity} : {},
-      required: paramter.required || (paramter.validates && paramter.validates.required)
+      required: paramter.required || (paramter.validates && paramter.validates.required)      
     }
+
+    if (paramsIn === 'body') {
+      conf.schema = {
+        type: paramter.type
+      }
+    } else {
+      conf.type = paramter.type
+    }
+
+    return conf
   })
 
-  config.responses = this.parseResponse(method, options)
+  config.responses = this.parseResponse(method, parser)
 
-  return createAction(path, config)  
+  return parser.createAction(path, config)  
 }
 
-PoplarSwaggerAdapter.prototype.parse = function (options) {
+PoplarSwaggerAdapter.prototype.parse = function (parser) {
   const APIRouter = this.APIRouter
-  const { createTag, callOnDone } = options
 
   Object.keys(APIRouter._apiBuilders).forEach(tagName => {
     debug('apiBuilder name: ', tagName)
-    debug('apiBuilder methods:')
-
     const apiBuilder = APIRouter._apiBuilders[tagName]
-    const tag = createTag({ name: tagName, description: `The ${name} tag`})
+    const tag = parser.createTag({ name: tagName, description: `The ${tagName} tag`})
 
     Object.keys(apiBuilder._methods).forEach(name => {
       const method = apiBuilder._methods[name]
-      const action = this.parseMethod([tagName], method, options)
+      const action = this.parseMethod([tagName], method, parser)
       debug('apiMethod name: ', name)
-      debug('apiMethod description: ', method.description)    
+      debug('apiMethod description: ', method.description) 
       debug('apiMethod accepts: ', method.accepts)
       debug('apiMethod http: ', method.http)
     })
   })
 
-  process.nextTick(callOnDone)
+  return
 }
 
 PoplarSwaggerAdapter.prototype.getBasePath = function () {
