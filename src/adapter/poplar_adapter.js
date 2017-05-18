@@ -63,16 +63,72 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
       }
     }
   }
-
   //TODO parse nested array 、 object、entity using
   parser.createDefinition(definition)
 
   return Object.assign(responses, resp)
 }
 
-/**
- * 把response 的entity信息添加到method.notes里面
- */
+PoplarSwaggerAdapter.prototype.parseQueryParams = function (tags, method, parser) {
+  return method.accepts.map(paramter => {
+    const conf = {
+      in: 'query',
+      name: paramter.arg,
+      description: paramter.description || "",
+      required: (paramter.required || (paramter.validates && paramter.validates.required) || false)   
+    }
+
+    if (paramter.default) {
+      conf.default = paramter.default
+    }
+
+    if (Array.isArray(paramter.type)) {
+      conf.type = 'array'
+      conf.items = {
+        type: paramter.type[0]
+      }
+    } else {
+      conf.type = paramter.type
+    }
+    return conf
+  })
+}
+
+PoplarSwaggerAdapter.prototype.parseBodyParams = function (tags, method, parser) {
+  const parameter = {
+    in: 'body',
+    name: "data",
+    description: method.name + ' params'
+  }
+  const definition = {
+    type: 'object',
+    required: [],    
+    name: tags[0] + method.name,
+  }
+  
+  definition.properties = method.accepts.reduce((acc, paramter) => {
+    const conf = {}
+    if (Array.isArray(paramter.type)) {
+      conf.type = 'array'
+      conf.items = {
+        type: paramter.type[0]
+      }
+    } else {
+      conf.type = paramter.type
+    }
+    if (paramter.required || (paramter.validates && paramter.validates.required)) {
+      definition.required.push(paramter.arg)
+    }
+    acc[paramter.arg] = conf
+    return acc
+  }, {})
+
+  parser.createDefinition(definition)
+  parameter.schema = { $ref: '#/definitions/' + definition.name }
+
+  return [parameter]
+}
+
 PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
   const config = {
     tags,
@@ -88,24 +144,26 @@ PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
   const paramsIn = config.verb.toLowerCase() === 'get' ? 'query' : 'body';
   config.consumes = config.DEFAULT_CONSUMES
   config.produces = config.DEFAULT_PRODUCES
-  config.parameters = method.accepts.map(paramter => {
-    const conf = {
-      in: paramsIn,
-      name: paramter.arg,
-      description: paramter.description || "",
-      required: paramter.required || (paramter.validates && paramter.validates.required)      
-    }
 
-    if (paramsIn === 'body') {
-      conf.schema = {
-        type: paramter.type
-      }
-    } else {
-      conf.type = paramter.type
+  switch(paramsIn) {
+    case 'query': {
+      config.parameters = this.parseQueryParams(tags, method, parser) 
+      break
     }
-
-    return conf
-  })
+    case 'body': {
+      config.parameters = this.parseBodyParams(tags, method, parser)      
+      break
+    }
+    case 'header': {
+      break
+    }
+    case 'form': {
+      break
+    }
+    default: {
+      break
+    }
+  }
 
   config.responses = this.parseResponse(method, parser)
 
@@ -123,10 +181,6 @@ PoplarSwaggerAdapter.prototype.parse = function (parser) {
     Object.keys(apiBuilder._methods).forEach(name => {
       const method = apiBuilder._methods[name]
       const action = this.parseMethod([tagName], method, parser)
-      debug('apiMethod name: ', name)
-      debug('apiMethod description: ', method.description) 
-      debug('apiMethod accepts: ', method.accepts)
-      debug('apiMethod http: ', method.http)
     })
   })
 
