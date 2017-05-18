@@ -1,5 +1,9 @@
 module.exports = {
   SWAGGER_VERSION: "2.0",
+  DEFAULT_SCHEMES: [
+    'http',
+    'https'
+  ],
   DEFAULT_CONSUMES: [
     'application/json',
     'application/x-www-form-urlencoded'
