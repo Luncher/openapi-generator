@@ -1,5 +1,6 @@
+const config = require('./config')
 const YamlParser = require('js-yaml')
-const debug = require('debug')('swagger-test:parser')
+const debug = require('debug')('openapi:parser')
 
 //refs http://swagger.io/specification/
 
@@ -19,19 +20,23 @@ SWaggerGenerator.prototype.init = function () {
   this.configure.paths = {}
   this.configure.definitions = {}
   this.configure.securityDefinitions = {}
-  this.configure.externalDocs = this.options.externalDocs || {}
   this.configure.host = this.options.host
-  this.configure.swagger = SWAGGER_VERSION
-  this.configure.schemes = this.options.schemes || ['http']
+  this.configure.swagger = config.SWAGGER_VERSION
+  this.configure.schemes = this.options.schemes || config.DEFAULT_SCHEMES
   this.configure.info = {}
   this.configure.info.description = this.options.description
   this.configure.info.version = this.options.version
   this.configure.info.title = this.options.title
-  this.configure.contact = this.options.contact || {}
-  this.configure.license = this.options.license || {}
+
+  const externalProps = ['contact', 'license', 'externalDocs']
+  externalProps.forEach(prop => {
+    if (this.options[prop]) {
+      this.configure[prop] = this.options[prop]
+    }
+  })
 }
 
-SWaggerGenerator.prototype.set = function (k, v) {
+SWaggerGenerator.prototype.setProperty = function (k, v) {
   this.configure[k] = v;
   return this
 }
@@ -54,78 +59,68 @@ SWaggerGenerator.prototype.toJSON = function () {
   return result
 }
 
-SWaggerGenerator.prototype.toYaml = function () {
+SWaggerGenerator.prototype.toYAML = function () {
   const result = this.toJSON()
   return YamlParser.dump(result)
 }
 
-SWaggerGenerator.prototype.run = function (adapter, onDone) {
-  const that = this
+SWaggerGenerator.prototype.createTag = function (options) {
+  const configure = this.configure;  
+  const tag = new SWaggerGenerator.Tag(options)
+  configure.tags.push(tag)
+  return tag
+}
+
+SWaggerGenerator.prototype.createPath = function (options) {
+  const configure = this.configure;  
+  const path = new SWaggerGenerator.Path(options)
+  configure.paths[options.name] = path
+  return path
+}
+
+SWaggerGenerator.prototype.createAction = function (path, options) {
+  const configure = this.configure;  
+  const action = new SWaggerGenerator.Action(options)
+  path.addAction(action)
+  return action 
+}
+
+SWaggerGenerator.prototype.createSecrity = function (options) {
   const configure = this.configure;
+  const security = new SWaggerGenerator.Security(options)
+  configure.securityDefinitions[options.name] = security
+  return security
+}
 
+SWaggerGenerator.prototype.createDefinition = function (options) {
+  const configure = this.configure;
+  const definition = new SWaggerGenerator.Definition(options)
+  configure.definitions[options.name] = definition
+  return definition
+}
+
+SWaggerGenerator.prototype.generate = function (adapter, onDone) {
   const basePath = adapter.getBasePath()
-  this.set('basePath', basePath)
+  this.setProperty('basePath', basePath)
 
-  function callOnCreateTag (options) {
-    const tag = new SWaggerGenerator.Tag(options)
-    configure.tags.push(tag)
-    return tag
+  adapter.parse(this)
+  if (this.type === 'yaml') {
+    return this.toYAML()
+  } else {
+    return this.toJSON()
   }
-
-  function callOnCreatePath (options) {
-    const path = new SWaggerGenerator.Path(options)
-    configure.paths[options.name] = path
-    return path
-  }
-
-  function callOnCreateAction (path, options) {
-    const action = new SWaggerGenerator.Action(options)
-    path.addAction(action)
-    return action
-  }
-
-  function callOnCreateSecurityDefinition (options) {
-    const security = new SWaggerGenerator.Security(options)
-    configure.securityDefinitions[options.name] = security
-    return security
-  }
-
-  function callOnCreateDefinition (options) {
-    const definition = new SWaggerGenerator.Definition(options)
-    configure.definitions[options.name] = definition
-    return definition
-  }
-
-  function setProperty (k, v) {
-    return that.set(k, v)
-  }
-
-  function callOnDone (err) {
-    if (err) {
-      onDone(err)
-    } else if (that.type === 'json') {
-      onDone(null, that.toJSON())
-    } else {
-      onDone(null, that.toYaml())
-    }
-  }
-
-  adapter.parse({
-    createTag: callOnCreateTag,
-    createPath: callOnCreatePath,
-    createAction: callOnCreateAction,
-    createSecrity: callOnCreateSecurityDefinition,
-    createDefinition: callOnCreateDefinition,
-    setProperty,    
-    callOnDone
-  })
-
-  return
 }
 
 SWaggerGenerator.Tag = function (options) {
   this.name = options.name
   this.description = options.description
+}
+
+SWaggerGenerator.Tag.prototype.toJSON = function () {
+  return {
+    name: this.name,
+    description: this.description
+  }
 }
 
 SWaggerGenerator.Path = function (options) {
@@ -134,14 +129,15 @@ SWaggerGenerator.Path = function (options) {
 }
 
 SWaggerGenerator.Path.prototype.addAction = function (action) {
-  this.actions.push(action)
+  debug('add action: ', action)
+  this.actions[action.name] = action
 }
 
 SWaggerGenerator.Path.prototype.toJSON = function () {
-  const actions = this.actions.reduce((acc, action) => {
-    return Object.assign(acc, action.toJSON())
+  const actions = Object.keys(this.actions).reduce((acc, name) => {
+    return Object.assign(acc, { [name]: this.actions[name].toJSON() })
   }, {})
-  return { ["/" + this.name]: actions }
+  return { [this.name]: actions }
 }
 
 SWaggerGenerator.Action = function (options) {
@@ -186,7 +182,6 @@ SWaggerGenerator.Action.prototype.addSecurity = function (options) {
 
 SWaggerGenerator.Action.prototype.toJSON = function () {
   return {
-    [this.verb]: {
       tags:  this.tags,
       summary: this.summary,
       description: this.description,
@@ -195,7 +190,6 @@ SWaggerGenerator.Action.prototype.toJSON = function () {
       parameters: this.parameters,
       responses: this.responses,
       security: this.security
-    }
   }
 }
 
