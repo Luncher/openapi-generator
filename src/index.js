@@ -73,7 +73,8 @@ SWaggerGenerator.prototype.createTag = function (options) {
 
 SWaggerGenerator.prototype.createPath = function (options) {
   const configure = this.configure;  
-  const path = new SWaggerGenerator.Path(options)
+  const path = configure.paths[options.name] || 
+    new SWaggerGenerator.Path(options)
   configure.paths[options.name] = path
   return path
 }
@@ -129,7 +130,6 @@ SWaggerGenerator.Path = function (options) {
 }
 
 SWaggerGenerator.Path.prototype.addAction = function (action) {
-  debug('add action: ', action)
   this.actions[action.name] = action
 }
 
@@ -220,6 +220,7 @@ SWaggerGenerator.Security.prototype.toJSON = function () {
 SWaggerGenerator.Definition = function (options) {
   this.name = options.name
   this.type = options.type
+  this.required = options.required
   this.properties = options.properties || {}
 
   return this
@@ -238,7 +239,11 @@ SWaggerGenerator.Definition.prototype.addProperty = function (options) {
 }
 
 SWaggerGenerator.Definition.prototype.toJSON = function () {
-  return { [this.name]: Object.assign({}, this) }
+  const json = Object.keys(this).filter(k => k !== 'name').reduce((acc, cur) => {
+    acc[cur] = this[cur]
+    return acc
+  }, {})
+  return { [this.name]: json }
 }
 
 module.exports = SWaggerGenerator
