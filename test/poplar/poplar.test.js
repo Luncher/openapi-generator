@@ -1,3 +1,4 @@
+const fs = require('fs-extra')
 const APIRouter = require('./api/api_routes').v1
 const SWaggerGenerator = require('../../src/')
 const PoplarAdapter = require('../../src/adapter/poplar_adapter')
@@ -12,7 +13,6 @@ const options = {
 
 const adapter = new PoplarAdapter({ APIRouter })
 const generator = new SWaggerGenerator(options)
-
-generator.parse(adapter, function (err, spec) {
-
-})
+const spec = generator.generate(adapter)
+fs.outputJsonSync('poplar-test-spec.json', spec)
+console.dir(spec, { depth: null })

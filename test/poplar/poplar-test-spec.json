@@ -1,0 +1,44 @@
+{
+  "tags": [{
+    "name": "test",
+    "description": "The test tag"
+  }],
+  "paths": {
+    "/test": {
+      "get": {
+        "tags": ["test"],
+        "summary": "index",
+        "description": "index",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "parameters": [{
+          "in": "query",
+          "name": "name",
+          "description": "测试名",
+          "required": true,
+          "type": "string"
+        }],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "definitions": {},
+  "securityDefinitions": {},
+  "host": "127.0.0.1",
+  "swagger": "2.0",
+  "schemes": ["http", "https"],
+  "info": {
+    "description": "The test poplar",
+    "version": "v2",
+    "title": "boqii test title"
+  },
+  "basePath": "/api/v1"
+}
