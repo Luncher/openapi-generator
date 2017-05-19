@@ -7,16 +7,137 @@
     "/test": {
       "get": {
         "tags": ["test"],
-        "summary": "index",
-        "description": "index",
-        "consumes": ["application/json"],
+        "summary": "getindex",
+        "description": "getindex",
+        "consumes": ["application/json", "application/x-www-form-urlencoded"],
         "produces": ["application/json"],
         "parameters": [{
           "in": "query",
           "name": "name",
-          "description": "测试名",
+          "required": false,
+          "description": "名称",
+          "type": "string"
+        }, {
+          "in": "query",
+          "name": "index",
+          "required": true,
+          "description": "索引",
+          "default": 1,
+          "type": "number"
+        }, {
+          "in": "query",
+          "name": "images",
+          "required": true,
+          "description": "图片数组",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/getindex-response"
+            }
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": []
+      },
+      "post": {
+        "tags": ["test"],
+        "summary": "postindex",
+        "description": "postindex",
+        "consumes": ["application/json", "application/x-www-form-urlencoded"],
+        "produces": ["application/json"],
+        "parameters": [{
+          "in": "body",
+          "name": "data",
+          "schema": {
+            "$ref": "#/definitions/testpostindex"
+          },
+          "description": "postindex params"
+        }],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": []
+      }
+    },
+    "/test/foo/{bar}": {
+      "get": {
+        "tags": ["test"],
+        "summary": "foorbar",
+        "description": "foorbar",
+        "consumes": ["application/json", "application/x-www-form-urlencoded"],
+        "produces": ["application/json"],
+        "parameters": [{
+          "in": "path",
+          "name": "bar",
+          "required": true,
+          "description": "barbar",
+          "type": "string"
+        }],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": []
+      }
+    },
+    "/test/user/{id}": {
+      "delete": {
+        "tags": ["test"],
+        "summary": "deleteuser",
+        "description": "deleteuser",
+        "consumes": ["application/json", "application/x-www-form-urlencoded"],
+        "produces": ["application/json"],
+        "parameters": [{
+          "in": "path",
+          "name": "id",
           "required": true,
           "type": "string"
+        }],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": []
+      },
+      "patch": {
+        "tags": ["test"],
+        "summary": "patchuser",
+        "description": "patchuser",
+        "consumes": ["application/json", "application/x-www-form-urlencoded"],
+        "produces": ["application/json"],
+        "parameters": [{
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }, {
+          "in": "body",
+          "name": "data",
+          "schema": {
+            "$ref": "#/definitions/testpatchuser"
+          },
+          "description": "patchuser params"
         }],
         "responses": {
           "200": {
@@ -30,7 +151,148 @@
       }
     }
   },
-  "definitions": {},
+  "definitions": {
+    "response-format": {
+      "type": "object",
+      "required": ["status", "message"],
+      "description": "默认输出数据格式",
+      "properties": {
+        "status": {
+          "type": "number",
+          "enum": [0, 1, 2]
+        },
+        "message": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "分页信息",
+          "properties": {
+            "maxid": {
+              "type": "string"
+            },
+            "minid": {
+              "type": "string"
+            },
+            "count": {
+              "type": "number"
+            }
+          }
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "data": {
+          "type": "object"
+        }
+      }
+    },
+    "getindex-response": {
+      "type": "object",
+      "required": ["uid", "name"],
+      "description": "",
+      "properties": {
+        "uid": {
+          "type": "number",
+          "format": "float"
+        },
+        "name": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "introduction": {
+          "type": "string"
+        },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "city": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              },
+              "telephone": {
+                "type": "string"
+              },
+              "postcode": {
+                "type": "number",
+                "format": "float"
+              },
+              "defaults": {
+                "type": "boolean"
+              }
+            },
+            "required": ["city", "name", "address", "telephone", "defaults"],
+            "description": ""
+          }
+        },
+        "socials": {
+          "type": "object",
+          "properties": {
+            "wechat": {
+              "type": "object",
+              "properties": {
+                "unionId": {
+                  "type": "string"
+                },
+                "nickname": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "number",
+                  "format": "float"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "testpostindex": {
+      "type": "object",
+      "required": ["name", "index", "images"],
+      "description": "",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "index": {
+          "type": "number",
+          "default": 1
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "testpatchuser": {
+      "type": "object",
+      "required": ["email"],
+      "description": "",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      }
+    }
+  },
   "securityDefinitions": {},
   "host": "127.0.0.1",
   "swagger": "2.0",

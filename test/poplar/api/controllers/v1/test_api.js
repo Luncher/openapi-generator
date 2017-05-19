@@ -43,5 +43,27 @@ userAPI.define('foorbar', {
   cb(null, "hello world")
 })
 
+userAPI.define('deleteuser', {
+  description: 'test path templating action',
+  accepts: [
+    { arg: 'id', type: 'string', description: 'user id', required: true }
+  ],
+  http: { path: 'user/:id', verb: 'delete' }
+}, function (params, cb) {
+  cb(null, "hello world")
+})
+
+userAPI.define('patchuser', {
+  description: 'test path templating action',
+  accepts: [
+    { arg: 'id', type: 'string', description: 'user id', required: true },
+    { arg: 'name', type: 'string', description: 'user name' },
+    { arg: 'email', type: 'string', description: 'user email', required: true },
+  ],
+  http: { path: 'user/:id', verb: 'patch' }
+}, function (params, cb) {
+  cb(null, "hello world")
+})
+
 // userAPI.
 module.exports = userAPI
