@@ -13,9 +13,12 @@ module.exports = {
   ],
   MONGOOSE_TYPE_MAPPING: {
     'string': { type: 'string' },
-    'objectId': { type: 'string' },
+    'objectid': { type: 'string' },
     'number': { type: 'number',  format: 'float' },
-    'date': { type: 'string', format: 'date-time' }
+    'date': { type: 'string', format: 'date-time' },
+    'boolean': { type: 'boolean' },
+    'array': { type: 'array' },
+    'mixed': { type: 'object' }
   },
   DEFAULT_RESPONSE: {
     "405": {

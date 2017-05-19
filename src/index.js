@@ -221,6 +221,7 @@ SWaggerGenerator.Definition = function (options) {
   this.name = options.name
   this.type = options.type
   this.required = options.required
+  this.description = options.description || ""
   this.properties = options.properties || {}
 
   return this
