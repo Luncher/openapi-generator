@@ -132,7 +132,7 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
     }
   }
 
-  //TODO entity using
+  //TODO entity using/self define entity parse
   parser.createDefinition(definition)
 
   return Object.assign(responses, resp)
