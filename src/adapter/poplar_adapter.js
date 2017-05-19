@@ -178,18 +178,20 @@ PoplarSwaggerAdapter.prototype.parseQueryParams = function (tags, method, parser
 }
 
 PoplarSwaggerAdapter.prototype.parseBodyParams = function (tags, method, parser) {
-  const parameter = { in: 'body',
-    name: "data",
-    description: method.name + ' params'
-  }
   const definition = {
     type: 'object',
     required: [],
     name: tags[0] + method.name,
   }
 
+  const pathParams = this.parsePathTemplateParams(method)
   definition.properties = method.accepts.reduce((acc, paramter) => {
-    const conf = {}
+    let conf = {}
+    const pathParamter = pathParams.find(it => it.name === paramter.arg)
+    if (pathParamter) {
+      pathParamter.type = paramter.type
+      return acc
+    }
     if (Array.isArray(paramter.type)) {
       conf.type = 'array'
       conf.items = {
@@ -198,19 +200,29 @@ PoplarSwaggerAdapter.prototype.parseBodyParams = function (tags, method, parser)
     } else {
       conf.type = paramter.type
     }
+    if (paramter.default) {
+      conf.default = paramter.default
+    }
     if (paramter.required || (paramter.validates && paramter.validates.required)) {
       definition.required.push(paramter.arg)
     }
     acc[paramter.arg] = conf
     return acc
   }, {})
-
-  parser.createDefinition(definition)
-  parameter.schema = {
-    $ref: '#/definitions/' + definition.name
+  
+  const parameters = [...pathParams]
+  if (Object.keys(definition.properties).length > 0) {
+    parameters.push({ in: 'body',
+      name: "data",
+      schema: {
+        $ref: '#/definitions/' + definition.name
+      },
+      description: method.name + ' params'
+    })
+    parser.createDefinition(definition)    
   }
 
-  return [parameter]
+  return parameters
 }
 
 PoplarSwaggerAdapter.prototype.parseOperation = function (method) {
@@ -225,7 +237,7 @@ PoplarSwaggerAdapter.prototype.parseOperation = function (method) {
 
 PoplarSwaggerAdapter.prototype.parseParamsIn = function (method) {
   const verb = method.http.verb
-
+  
   if (verb.toLowerCase() === 'get') {
     return 'query'
   } else {
@@ -255,28 +267,23 @@ PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
   })
 
   switch (this.parseParamsIn(method)) {
-    case 'query':
-      {
-        conf.parameters = this.parseQueryParams(tags, method, parser)
-        break
-      }
-    case 'body':
-      {
-        conf.parameters = this.parseBodyParams(tags, method, parser)
-        break
-      }
-    case 'header':
-      {
-        break
-      }
-    case 'form':
-      {
-        break
-      }
-    default:
-      {
-        break
-      }
+    case 'query': {
+      conf.parameters = this.parseQueryParams(tags, method, parser)
+      break
+    }
+    case 'body': {
+      conf.parameters = this.parseBodyParams(tags, method, parser)
+      break
+    }
+    case 'header': {
+      break
+    }
+    case 'form': {
+      break
+    }
+    default: {
+      break
+    }
   }
 
   conf.responses = this.parseResponse(method, parser)
