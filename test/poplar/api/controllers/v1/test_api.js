@@ -30,5 +30,15 @@ testAPI.define('postindex', {
   cb(null, "hello world")
 })
 
+testAPI.define('foorbar', {
+  description: 'test path templating action',
+  accepts: [
+    { arg: 'bar', type: 'string', description: 'barbar', required: true } 
+  ],
+  http: { path: 'foo/:bar', verb: 'get' }
+}, function (params, cb) {
+  cb(null, "hello world")
+})
+
 // testAPI.
 module.exports = testAPI
