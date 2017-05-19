@@ -69,15 +69,33 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
   return Object.assign(responses, resp)
 }
 
+PoplarSwaggerAdapter.prototype.parsePathTemplateParams = function (method) {
+  debug('http: ', method.http)
+  debug('http.path: ', method.http.path)
+  return method.http.path.split('/')
+  .filter(it => it && it[0] === ':')
+  .map(it => it.slice(1))
+  .map(it => {
+    return {
+      in: 'path',
+      name: it,
+      required: true
+    }
+  })
+}
+
 PoplarSwaggerAdapter.prototype.parseQueryParams = function (tags, method, parser) {
+  const pathParams = this.parsePathTemplateParams(method)
+
   return method.accepts.map(paramter => {
-    const conf = {
+    const pathParamter = pathParams.find(it => it.name === paramter.arg)
+    const defaultConf = {
       in: 'query',
       name: paramter.arg,
-      description: paramter.description || "",
       required: (paramter.required || (paramter.validates && paramter.validates.required) || false)   
     }
-
+    const conf = pathParamter || defaultConf
+    conf.description = paramter.description || ""
     if (paramter.default) {
       conf.default = paramter.default
     }
@@ -129,29 +147,52 @@ PoplarSwaggerAdapter.prototype.parseBodyParams = function (tags, method, parser)
   return [parameter]
 }
 
+PoplarSwaggerAdapter.prototype.parseOperation = function (method) {
+  return String(method.http.path).split('/').map(it => {
+    if (it && it[0] === ':') {
+      return '{' + it.slice(1) + '}'
+    } else {
+      return it
+    }
+  }).join('/')
+}
+
+PoplarSwaggerAdapter.prototype.parseParamsIn = function (method) {
+  const verb = method.http.verb
+  
+  if (verb.toLowerCase() === 'get') {
+    return 'query'
+  } else {
+    return 'body'
+  }
+}
+
+// 1. path template
+// 2. parse response
+// 3. generate ui
+// 4. generate code stub
 PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
-  const config = {
+  const conf = {
     tags,
     summary: method.name,
     description: method.name,
     verb: method.http.verb,
     name: method.http.verb,
-    operationId: method.http.path
+    consumes: config.DEFAULT_CONSUMES,
+    produces: config.DEFAULT_PRODUCES,
+    operationId: this.parseOperation(method)
   }
-  const pathName = '/' + method._apiBuilder.name + 
-    (config.operationId ? ('/' + config.operationId) : '')
-  const path = parser.createPath({ name: pathName })
-  const paramsIn = config.verb.toLowerCase() === 'get' ? 'query' : 'body';
-  config.consumes = config.DEFAULT_CONSUMES
-  config.produces = config.DEFAULT_PRODUCES
 
-  switch(paramsIn) {
+  const pathName = '/' + method._apiBuilder.name + (conf.operationId ? ('/' + conf.operationId) : '')
+  const path = parser.createPath({ name: pathName })
+
+  switch(this.parseParamsIn(method)) {
     case 'query': {
-      config.parameters = this.parseQueryParams(tags, method, parser) 
+      conf.parameters = this.parseQueryParams(tags, method, parser) 
       break
     }
     case 'body': {
-      config.parameters = this.parseBodyParams(tags, method, parser)      
+      conf.parameters = this.parseBodyParams(tags, method, parser)      
       break
     }
     case 'header': {
@@ -165,9 +206,9 @@ PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
     }
   }
 
-  config.responses = this.parseResponse(method, parser)
+  conf.responses = this.parseResponse(method, parser)
 
-  return parser.createAction(path, config)  
+  return parser.createAction(path, conf)
 }
 
 PoplarSwaggerAdapter.prototype.parse = function (parser) {
