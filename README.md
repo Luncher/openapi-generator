@@ -2,7 +2,8 @@
 
 openapi([swagger](http://swagger.io/)) spec generator
 
-usually there ara has to way for genrate openapi spec `top-down approach` and ` bottom-up approach`, reference [Getting Started](http://swagger.io/getting-started/) the top-down approach so inconvenient. for an exists project I adapt the ` bottom-up approach`
+There are usually two ways to generate openapi spec `top-down approach`and` bottom-up approach`, ref [Getting Started](http://swagger.io/getting-started/) the `top-down` is too cumbersome
+. For an existing project I use the `bottom-up` approach.
 
 
 ## mainly through the following steps
