@@ -41,9 +41,9 @@ There are usually two ways to generate openapi spec `top-down approach`and` bott
 
 ## Todo List
 
-[ ] 1. Server and client code stub generate
-[ ] 2. Implement `feathersjs` adapter
-[ ] 3. Design a DSL to implement third-party adapters
+- [ ] Server and client code stub generate
+- [ ] Implement `feathersjs` adapter
+- [ ] Design a DSL to implement third-party adapters
 
 
 ## License
