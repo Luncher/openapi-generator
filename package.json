@@ -4,17 +4,23 @@
   "main": "src/index.js",
   "license": "MIT",
   "scripts": {
-    "test": "cross-env mocha ./test/**/*.test.js --timeout 20000",
-    "cov": "cross-env nyc --reporter=lcovonly mocha ./test/**/*.test.js --timeout 20000"
+    "test": "cross-env NODE_ENV=test mocha ./test/**/*.test.js --timeout 20000",
+    "cov": "cross-env NODE_ENV=test nyc --reporter=lcovonly mocha ./test/**/*.test.js --timeout 20000 --recursive --compilers js:babel-register"
   },
   "nyc": {
     "include": [
       "src/*.js"
     ],
+    "require": [
+      "babel-register"
+    ],
     "sourceMap": false,
     "instrument": false
   },
   "dependencies": {
+    "babel-plugin-istanbul": "^4.1.3",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-register": "^6.24.1",
     "cross-env": "^5.0.0",
     "fs-extra": "^3.0.1",
     "js-yaml": "^3.8.4",
