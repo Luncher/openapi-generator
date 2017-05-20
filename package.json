@@ -3,8 +3,28 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "license": "MIT",
+  "scripts": {
+    "test": "cross-env mocha ./test/**/*.test.js --timeout 20000",
+    "cov": "cross-env nyc --reporter=lcovonly mocha ./test/**/*.test.js --timeout 20000"
+  },
+  "nyc": {
+    "include": [
+      "src/*.js"
+    ],
+    "sourceMap": false,
+    "instrument": false
+  },
   "dependencies": {
-    "js-yaml": "^3.8.4"
+    "cross-env": "^5.0.0",
+    "fs-extra": "^3.0.1",
+    "js-yaml": "^3.8.4",
+    "mocha": "^3.4.1",
+    "mongoose": "^4.10.0",
+    "nyc": "^10.3.2",
+    "seamless-immutable": "^7.1.2",
+    "serialize-javascript": "^1.3.0",
+    "swagger-ui-dist": "^3.0.11",
+    "urllib": "^2.22.0"
   },
   "devDependencies": {
     "express": "^4.15.2",
