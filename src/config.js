@@ -27,5 +27,6 @@ module.exports = {
     "200": {
       "description": "successful operation"
     }
-  }
+  },
+  OPENAPI_VALIDATE_URL: 'http://online.swagger.io/validator/debug'
 }
