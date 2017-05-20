@@ -18,6 +18,8 @@ There are usually two ways to generate openapi spec `top-down approach`and` bott
 
 >Usually everyone's application is not the same, but some things are similar, such as checking the input parameters, return to the client format fixed data content. I try to make the user only need to change the amount of code can be openapi related functions into existing applications.
 
+---
+
 ## mainly through the following steps
 
 - 1. Define a skeleton according to the openapi [specification](http://swagger.io/specification/) for generate spec.
@@ -25,6 +27,7 @@ There are usually two ways to generate openapi spec `top-down approach`and` bott
 - 3. Using swagger-codegen generate server and client code stub.
 - 4. Using swagger-ui generate api document.
 
+---
 
 ## How to use
 
@@ -34,6 +37,7 @@ There are usually two ways to generate openapi spec `top-down approach`and` bott
 
 + 3. Refer to the `examples` folder to learn how to integrate into the application
 
+---
 
 ## Todo List
 
