@@ -1,18 +1,20 @@
 const fs = require('fs-extra')
+const assert = require('assert')
 const APIRouter = require('./api/api_routes').v1
-const SWaggerGenerator = require('../../src/')
-const PoplarAdapter = require('../../src/adapter/poplar_adapter')
+const parsePoplar = require('../../src/index').parsePoplar
 
-const options = {
-  type: 'json',
-  version: 'v2',  
-  host: '127.0.0.1',
-  title: 'boqii test title',
-  description: 'The test poplar',
-}
+describe('poplar openapi adapter test', function () {
+  const options = {
+    type: 'json',
+    version: 'v2',
+    host: '127.0.0.1',
+    title: 'The poplar api title',
+    description: 'The poplar openapi description',
+  }
 
-const adapter = new PoplarAdapter({ APIRouter })
-const generator = new SWaggerGenerator(options)
-const spec = generator.generate(adapter)
-fs.outputJsonSync('poplar-test-spec.json', spec)
-// console.dir(spec, { depth: null })
+  it('show allow parsePoplar', function (next) {
+    parsePoplar(APIRouter, options, function (err, spec) {
+      next(err)
+    })
+  })
+})
