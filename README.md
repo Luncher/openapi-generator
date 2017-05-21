@@ -11,7 +11,7 @@
 [codecov-url]: https://codecov.io/gh/Luncher/openapi-generator
 [codecov-image]: https://img.shields.io/codecov/c/github/Luncher/openapi-generator.svg?style=flat
 
-openapi([swagger](http://swagger.io/)) spec generator
+openapi([swagger](http://swagger.io/)) spec generator, The integrated swagger-ui is used to generate API documentation
 
 There are usually two ways to generate openapi spec `top-down approach`and` bottom-up approach`, ref [Getting Started](http://swagger.io/getting-started/) the `top-down` is too cumbersome
 . For an existing project I use the `bottom-up` approach. 
