@@ -4,6 +4,7 @@ const assert = require('assert')
 const express = require('express')
 const poplar = require('poplar')
 const config = require('./config')
+const debug = require('debug')('openapi:index')
 const SWaggerGenerator = require('./generator')
 const PoplarAdapter = require('./adapter/poplar')
 
@@ -11,7 +12,7 @@ function validateSpec (spec, cb) {
   urllib.request(config.OPENAPI_VALIDATE_URL, {
     method: 'POST',
     data: spec,
-    timeout: 20000,
+    timeout: 60000,
     dataType: 'json', 
     headers: {
       'Content-Type': 'application/json'
@@ -41,8 +42,14 @@ exports.parsePoplar = function (APIRouter, options, cb) {
   const generator = new SWaggerGenerator(options)
   const adapter = new PoplarAdapter({ APIRouter })
   const spec = generator.generate(adapter)
-  
-  return validateSpec(spec, cb)
+  if (options.type === 'yaml') {
+    debug('if generate yaml then skip validate because of remote server BUG')
+    // fs.writeFileSync('poplar-test.yaml', spec)
+    return process.nextTick(cb, null, spec)
+  } else {
+    // fs.outputJsonSync('poplar-test.json', spec)
+    return validateSpec(spec, cb)    
+  }
 }
 
 exports.parseFeathers = function (app, options) {

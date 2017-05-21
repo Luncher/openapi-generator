@@ -12,8 +12,14 @@ describe('poplar openapi adapter test', function () {
     description: 'The poplar openapi description',
   }
 
-  it('show allow parsePoplar', function (next) {
+  it('show allow parsePoplar json', function (next) {
     parsePoplar(APIRouter, options, function (err, spec) {
+      next(err)
+    })
+  })
+
+  it('show allow parsePoplar yaml', function (next) {
+    parsePoplar(APIRouter, Object.assign({}, options, {type: 'yaml'}), function (err, spec) {
       next(err)
     })
   })

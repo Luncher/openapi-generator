@@ -4,8 +4,8 @@
   "main": "src/index.js",
   "license": "MIT",
   "scripts": {
-    "test": "cross-env NODE_ENV=test mocha ./test/**/*.test.js --timeout 20000 --recursive --compilers js:babel-register",
-    "cov": "cross-env NODE_ENV=test nyc --reporter=lcovonly mocha ./test/**/*.test.js --timeout 20000 --recursive --compilers js:babel-register"
+    "test": "cross-env DEBUG=openapi:* NODE_ENV=test mocha ./test/**/*.test.js --timeout 20000 --recursive --compilers js:babel-register",
+    "cov": "cross-env DEBUG=openapi:* NODE_ENV=test nyc --reporter=lcovonly mocha ./test/**/*.test.js --timeout 20000 --recursive --compilers js:babel-register"
   },
   "nyc": {
     "include": [
