@@ -4,7 +4,7 @@ const Entity = require('poplar').Entity
 const debug = require('debug')('openapi:adapter:poplar')
 
 const DEFAULT_RESPONSE_DEFINITION = {
-  name: 'response-format',
+  name: 'ApiResponse',
   description: '默认输出数据格式',
   type: 'object',
   required: ['status', 'message'],
