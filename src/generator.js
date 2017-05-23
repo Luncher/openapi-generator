@@ -93,9 +93,15 @@ SWaggerGenerator.prototype.createSecrity = function (options) {
   return security
 }
 
+SWaggerGenerator.prototype.getDefinition = function (name) {
+  const configure = this.configure
+  return configure.definitions[name]
+}
+
 SWaggerGenerator.prototype.createDefinition = function (options) {
   const configure = this.configure;
-  const definition = new SWaggerGenerator.Definition(options)
+  const definition = configure.definitions[options.name]
+    || new SWaggerGenerator.Definition(options)
   configure.definitions[options.name] = definition
   return definition
 }
