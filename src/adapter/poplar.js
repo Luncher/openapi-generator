@@ -103,7 +103,6 @@ PoplarSwaggerAdapter.prototype.createDefaultDefinition = function (name, descrip
   return {
     type: "object",
     properties: {},
-    required: [],
     name,
     description
   }
@@ -119,12 +118,11 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
   const aliasFields = []
   const entityProps = Object.keys(mappings)
   .reduce((props, k) => {
-    const it = mappings[k]
-    const fieldProp = {}
     let type
+    const fieldProp = {}
+    const it = mappings[k]
     debug('parse entity field: ' + k)
     debug('parse entity config:', it)    
-    it.type = it.type === 'any' ? 'string': it.type
     switch(it.act) {
       case 'alias': {
         if (it.using) {
@@ -133,7 +131,6 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
         } else {
           const name = it.value
           type = (properties[name] && properties[name].type) || it.type
-          fieldProp.type = type
           aliasFields.push(name)
         }
         break
@@ -153,6 +150,8 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
         break
       }
     }
+
+    type = type === 'any' ? 'string': type
     if (type) {
       fieldProp.type = type
     }
@@ -166,6 +165,9 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
         fieldProp.type = mappingDefaultType(it.default)
       }
     }
+    debug('type: ', type)
+    debug('field: ', k)
+    debug('fieldProp:', fieldProp)
     props[k] = fieldProp
     return props
   }, {})
@@ -194,8 +196,9 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
 
 PoplarSwaggerAdapter.prototype.parseEntity = function (definition, entity) {
   const excepts = entity._excepts.slice()
-  debug('parseEntity')
   const entityProps = this.parseEntityMapping(definition, entity)
+
+  debug('parseEntity')
 
   Object.assign(definition.properties, entityProps)
   definition.properties = Object.keys(definition.properties)
@@ -212,22 +215,34 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
   const responses = Object.assign({}, config.DEFAULT_RESPONSE)
   const entity = method.presenter || (method.notes && method.notes.entity)
   const schema = method.notes && method.notes.schema
-
+  
   if (!schema && !entity) {
     debug('using default response')
     return responses
   }
 
-  let definition;
-  if (schema) {
-    definition = this.parseMongoSchema(schema.obj)
-  } else {
-    definition = this.createDefaultDefinition()
-  }
-  definition.name = method.name + '-Response'
+  const self = this
+  function createAPIEntity () {
+    let definition
+    const definitionName = entity._name
 
-  definition = this.parseEntity(definition, entity)
-  parser.createDefinition(definition)
+    definition = parser.getDefinition(definitionName)
+    if (!definition) {
+      if (schema) {
+        definition = self.parseMongoSchema(schema.obj)
+      } else {
+        definition = self.createDefaultDefinition()
+      }
+      definition.name = definitionName
+      definition = self.parseEntity(definition, entity)
+      parser.createDefinition(definition)      
+    }
+
+    return definition
+  }
+
+  assert(entity, 'entity must exists')
+  const definition = createAPIEntity()
 
   const resp = {
     "200": {
@@ -364,7 +379,8 @@ PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
     operationId: this.parseOperation(method)
   }
 
-  const pathName = '/' + method._apiBuilder.name + (conf.operationId ? ('/' + conf.operationId) : '')
+  const pathName = '/' + method._apiBuilder.name + 
+    (conf.operationId ? ( (conf.operationId.indexOf('/') === 0 ? '' : '/') + conf.operationId) : '')
   const path = parser.createPath({
     name: pathName
   })
