@@ -24,6 +24,6 @@ function apiCreator (version, options = {}) {
   return api
 }
 
-const apiV1 = apiCreator(1)
+const apiV1 = apiCreator(1.1)
 
 module.exports = { v1: apiV1 }

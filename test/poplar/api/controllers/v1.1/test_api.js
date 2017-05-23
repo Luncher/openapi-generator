@@ -1,13 +1,10 @@
 const poplar = require('poplar')
 const userAPI = new poplar.ApiBuilder('test')
 const userModel = require('../../../models/user/user')
+const actionModel = require('../../../models/user/action')
 const userEntity = require('../../../models/user/user_entity')
+const userAddrEntity = require('../../../models/user/user_address_simple')
 
-/**
- * not supported:
-* { arg: 'body', type: ['object'], description: '文章内容（图文混排）' }
-* { arg: 'str', type: [['string']], description: '文章内容（图文混排）' }
-*/
 userAPI.define('getindex', {
   description: 'test api index action',
   accepts: [
@@ -15,11 +12,22 @@ userAPI.define('getindex', {
     { arg: 'index', type: 'number', description: '索引', default: 1, required: true },
     { arg: 'images', type: ['string'], description: '图片数组', validates: { required: true } },
   ],
-  notes: { schema: userModel.schema , entity: userEntity },
+  notes: { schema: actionModel.schema , entity: userAddrEntity },
   http: { path: '', verb: 'get' }
 }, function (params, cb) {
   cb(null, "hello world")
 })
+
+// userAPI.define('getUserAddress', {
+//   description: 'getUserAddress method',
+//   accepts: [
+//     { arg: 'uid', type: 'string', description: '用户uid' },    
+//   ],
+//   notes: { entity: userAddrEntity },
+//   http: { path: '/address/:uid', verb: 'get' }
+// }, function (params, cb) {
+//   cb(null, "hello world")
+// })
 
 // userAPI.define('postindex', {
 //   description: 'test api index action',

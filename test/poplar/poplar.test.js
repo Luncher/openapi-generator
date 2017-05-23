@@ -14,6 +14,7 @@ const options = {
 
 parsePoplar(APIRouter, options, function (err, spec) {
   console.dir(err)
+  process.exit()
 })
 
 /*

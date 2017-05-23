@@ -11,7 +11,7 @@ const UserAddressSimple = new Entity('UserAddressSimple', {
   postcode: { default: '' }
 });
 
-UserAddressSimple.excepts('_id');
+UserAddressSimple.excepts('_id', 'telephone');
 
 UserAddressSimple.expose('default', {}, function(obj) {
   return obj.defaults ? 1 : 0;
