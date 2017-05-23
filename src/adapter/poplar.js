@@ -1,6 +1,5 @@
 const assert = require('assert')
 const config = require('../config');
-const Entity = require('poplar').Entity
 const debug = require('debug')('openapi:adapter:poplar')
 
 const DEFAULT_RESPONSE_DEFINITION = {
@@ -43,6 +42,13 @@ const DEFAULT_RESPONSE_DEFINITION = {
   }
 }
 
+//||支持普通的entity操作
+// 1. using
+// 2. alias
+// 3. value
+// 4. get
+// 5. description
+
 function PoplarSwaggerAdapter(options) {
   this.options = options
   this.APIRouter = options.APIRouter
@@ -52,7 +58,7 @@ PoplarSwaggerAdapter.prototype.init = function (parser) {
   parser.createDefinition(DEFAULT_RESPONSE_DEFINITION)  
 }
 
-PoplarSwaggerAdapter.prototype.parseDefinitionTree = function (root) {
+PoplarSwaggerAdapter.prototype.parseMongoSchema = function (root) {
   const definition = {
     type: "object",
     properties: {},
@@ -68,10 +74,10 @@ PoplarSwaggerAdapter.prototype.parseDefinitionTree = function (root) {
 
       if (Array.isArray(item)) {
         itemDef.type = 'array'
-        itemDef.items = this.parseDefinitionTree(item[0])
+        itemDef.items = this.parseMongoSchema(item[0])
       } else if (!item.type) {
         itemDef.type = 'object'
-        const subConfig = this.parseDefinitionTree(item)
+        const subConfig = this.parseMongoSchema(item)
         itemDef.properties = subConfig.properties
       } else {
         Object.assign(itemDef, config.MONGOOSE_TYPE_MAPPING[item.type.toLowerCase()])
@@ -93,35 +99,135 @@ PoplarSwaggerAdapter.prototype.parseDefinitionTree = function (root) {
   return definition
 }
 
-PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
-  const responses = Object.assign({}, config.DEFAULT_RESPONSE)
-  const entity = method.presenter || (method.notes && method.notes.entity)
-  const schema = method.notes && method.notes.schema
+PoplarSwaggerAdapter.prototype.createDefaultDefinition = function (name, description) {
+  return {
+    type: "object",
+    properties: {},
+    required: [],
+    name,
+    description
+  }
+}
 
-  if (!schema || !entity) {
-    debug('using default response')
-    return responses
+PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity) {
+  const mappings = entity._mappings
+  const properties = definition.properties
+
+  debug('parseEntityMapping')
+  debug('properties', properties)
+  
+  const aliasFields = []
+  const entityProps = Object.keys(mappings)
+  .reduce((props, k) => {
+    const it = mappings[k]
+    const fieldProp = {}
+    let type
+    debug('parse entity field: ' + k)
+    debug('parse entity config:', it)    
+    it.type = it.type === 'any' ? 'string': it.type
+    switch(it.act) {
+      case 'alias': {
+        if (it.using) {
+          const entity = it.using
+          fieldProp['$ref'] = '#/definitions/' + entity._name
+        } else {
+          const name = it.value
+          type = (properties[name] && properties[name].type) || it.type
+          fieldProp.type = type
+          aliasFields.push(name)
+        }
+        break
+      }
+      case 'get': {
+        const fieldPath = it.value
+        const value = getNestedProp(definition, fieldPath)
+        type = value.type
+        break
+      }
+      case 'value': {
+        it.default = it.value
+        break
+      }
+      case 'function': {
+        type = it.type
+        break
+      }
+    }
+    if (type) {
+      fieldProp.type = type
+    }
+    if (it.description) {
+      fieldProp.description = it.description
+    }
+
+    if (it.default !== null) {
+      fieldProp.default = it.default
+      if (!type) {
+        fieldProp.type = mappingDefaultType(it.default)
+      }
+    }
+    props[k] = fieldProp
+    return props
+  }, {})
+
+  function getNestedProp (obj, fieldPath) {
+    const fields = fieldPath.split('.')
+    return fields.reduce((acc, k) => {
+      return acc.properties[k]
+    }, obj)
   }
 
-  const exposes = entity._mappings
-  const excepts = entity._excepts.slice()
-  let rawDefinition = Object.assign({}, schema.obj, exposes)
-  const definition = this.parseDefinitionTree(rawDefinition)
-  definition.name = method.name + '-response'
-
-  Object.keys(exposes).forEach(k => {
-    if (exposes[k].act === 'alias') {
-      definition.properties[exposes[k].name] = definition.properties[k]
-      delete definition.properties[k]
+  function mappingDefaultType (value) {
+    if (value === 0) {
+      return "number"
+    } else if (!value) {
+      return 'string'
+    } else if (Array.isArray(value)) {
+      return 'array'
+    } else {
+      return typeof value
     }
-  })
+  }
 
+  return entityProps
+}
+
+PoplarSwaggerAdapter.prototype.parseEntity = function (definition, entity) {
+  const excepts = entity._excepts.slice()
+  debug('parseEntity')
+  const entityProps = this.parseEntityMapping(definition, entity)
+
+  Object.assign(definition.properties, entityProps)
   definition.properties = Object.keys(definition.properties)
     .filter(k => excepts.indexOf(k) === -1)
     .reduce((acc, cur) => {
       acc[cur] = definition.properties[cur]
       return acc
     }, {})
+
+  return definition
+}
+
+PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
+  const responses = Object.assign({}, config.DEFAULT_RESPONSE)
+  const entity = method.presenter || (method.notes && method.notes.entity)
+  const schema = method.notes && method.notes.schema
+
+  if (!schema && !entity) {
+    debug('using default response')
+    return responses
+  }
+
+  let definition;
+  if (schema) {
+    definition = this.parseMongoSchema(schema.obj)
+  } else {
+    definition = this.createDefaultDefinition()
+  }
+  definition.name = method.name + '-Response'
+
+  definition = this.parseEntity(definition, entity)
+  parser.createDefinition(definition)
 
   const resp = {
     "200": {
@@ -131,9 +237,6 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
       }
     }
   }
-
-  //TODO entity using/self define entity parse
-  parser.createDefinition(definition)
 
   return Object.assign(responses, resp)
 }
