@@ -200,6 +200,7 @@ module.exports = class Entity {
         act: act,
         value: value,
         default: defaultVal,
+        description: options.description,
         if: ifFn,
         using: using
       };
