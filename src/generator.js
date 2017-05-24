@@ -64,6 +64,13 @@ SWaggerGenerator.prototype.toYAML = function () {
   return YamlParser.dump(result)
 }
 
+SWaggerGenerator.prototype.createResponse = function (status, description, definition) {
+  const resp = Object.create(null)
+  resp[status] = Object.assign({ description }, 
+    (definition ? { schema: { $ref: '#/definitions/' + definition.name }} : null))
+  return resp
+}
+
 SWaggerGenerator.prototype.createTag = function (options) {
   const configure = this.configure;  
   const tag = new SWaggerGenerator.Tag(options)
