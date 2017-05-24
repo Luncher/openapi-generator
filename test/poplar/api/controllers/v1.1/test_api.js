@@ -4,6 +4,7 @@ const userModel = require('../../../models/user/user')
 const actionModel = require('../../../models/user/action')
 const userEntity = require('../../../models/user/user_entity')
 const userAddrEntity = require('../../../models/user/user_address_simple')
+const sequelize = require('../../../models/user/sequelize')
 
 userAPI.define('getindex', {
   description: 'test api index action',
@@ -12,7 +13,7 @@ userAPI.define('getindex', {
     { arg: 'index', type: 'number', description: '索引', default: 1, required: true },
     { arg: 'images', type: ['string'], description: '图片数组', validates: { required: true } },
   ],
-  notes: { model: actionModel , entity: userAddrEntity },
+  notes: { model: sequelize , entity: userAddrEntity },
   http: { path: '', verb: 'get' }
 }, function (params, cb) {
   cb(null, "hello world")
