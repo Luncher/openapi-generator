@@ -74,8 +74,6 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
   const mappings = entity._mappings
   const properties = definition.properties
 
-  debug('parseEntityMapping')
-  debug('properties', properties)
   
   const aliasFields = []
   const entityProps = Object.keys(mappings)
@@ -83,8 +81,6 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
     let type
     const fieldProp = {}
     const it = mappings[k]
-    debug('parse entity field: ' + k)
-    debug('parse entity config:', it)    
     switch(it.act) {
       case 'alias': {
         if (it.using) {
@@ -100,7 +96,9 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
       case 'get': {
         const fieldPath = it.value
         const value = getNestedProp(definition, fieldPath)
-        type = value.type
+        if (value) {
+          type = value.type
+        }
         break
       }
       case 'value': {
@@ -127,9 +125,6 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
         fieldProp.type = mappingDefaultType(it.default)
       }
     }
-    debug('type: ', type)
-    debug('field: ', k)
-    debug('fieldProp:', fieldProp)
     props[k] = fieldProp
     return props
   }, {})
@@ -137,7 +132,9 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
   function getNestedProp (obj, fieldPath) {
     const fields = fieldPath.split('.')
     return fields.reduce((acc, k) => {
-      return acc.properties[k]
+      if (acc.properties) {
+        return acc.properties[k]
+      }
     }, obj)
   }
 
@@ -156,6 +153,15 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
   return entityProps
 }
 
+
+PoplarSwaggerAdapter.prototype.createDefaultEntity = function () {
+  const entity = Object.create(null)
+  entity._excepts = ['id']
+  entity._mappings = {}
+  entity._name = 'The Default Entity'
+  return entity
+}
+
 PoplarSwaggerAdapter.prototype.parseEntity = function (definition, entity) {
   const excepts = entity._excepts.slice()
   const entityProps = this.parseEntityMapping(definition, entity)
@@ -169,6 +175,10 @@ PoplarSwaggerAdapter.prototype.parseEntity = function (definition, entity) {
       acc[cur] = definition.properties[cur]
       return acc
     }, {})
+  
+  if (definition.required) {
+    definition.required = definition.required.filter(k => excepts.indexOf(k) === -1)
+  }
 
   return definition
 }
@@ -184,10 +194,15 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
   }
 
   function getModelType (model) {
-    if (model instanceof mongoose.Model) {
+    if (!model) {
+      return 'default'
+    }
+    else if (Object.getPrototypeOf(model) === mongoose.Model) {
       return 'mongoose'
     } else if (model instanceof Sequelize.Model) {
       return 'sequelize'
+    } else {
+      return 'default'      
     }
   }
 
@@ -198,12 +213,14 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
 
     definition = parser.getDefinition(definitionName)
     if (!definition) {
-      switch(getModelType()) {
+      switch(getModelType(model)) {
         case 'mongoose': {
+          debug('parse mongoose')       
           definition = Parser.parseMongoSchema(model)
           break
         }
         case 'sequelize': {
+          debug('parse sequelize')
           definition = Parser.parseSequelizeSchema(model)
           break
         }
@@ -211,6 +228,7 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
           definition = self.createDefaultDefinition()
         }
       }
+
       definition.name = definitionName
       definition = self.parseEntity(definition, entity)
       parser.createDefinition(definition)      
@@ -221,16 +239,7 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
 
   assert(entity, 'entity must exists')
   const definition = createAPIEntity()
-
-  const resp = {
-    "200": {
-      "description": "successful operation",
-      "schema": {
-        "$ref": "#/definitions/" + definition.name
-      }
-    }
-  }
-
+  const resp = parser.createResponse(200, `The ${definition.name} Response`, definition)
   return Object.assign(responses, resp)
 }
 
@@ -241,6 +250,7 @@ PoplarSwaggerAdapter.prototype.parsePathTemplateParams = function (method) {
     .map(it => {
       return { in: 'path',
         name: it,
+        type: 'string',
         required: true
       }
     })
@@ -256,7 +266,9 @@ PoplarSwaggerAdapter.prototype.parseQueryParams = function (tags, method, parser
       required: (paramter.required || (paramter.validates && paramter.validates.required) || false)
     }
     const conf = pathParamter || defaultConf
-    conf.description = paramter.description || ""
+    if (paramter.description) {
+      conf.description = paramter.description
+    }
     if (paramter.default) {
       conf.default = paramter.default
     }
@@ -276,7 +288,6 @@ PoplarSwaggerAdapter.prototype.parseQueryParams = function (tags, method, parser
 PoplarSwaggerAdapter.prototype.parseBodyParams = function (tags, method, parser) {
   const definition = {
     type: 'object',
-    required: [],
     name: tags[0] + method.name,
   }
 
@@ -286,7 +297,11 @@ PoplarSwaggerAdapter.prototype.parseBodyParams = function (tags, method, parser)
     const pathParamter = pathParams.find(it => it.name === paramter.arg)
     if (pathParamter) {
       pathParamter.type = paramter.type
+      pathParamter.description = paramter.description || ""
       return acc
+    }
+    if (paramter.description) {
+      conf.description = paramter.description
     }
     if (Array.isArray(paramter.type)) {
       conf.type = 'array'
@@ -300,6 +315,7 @@ PoplarSwaggerAdapter.prototype.parseBodyParams = function (tags, method, parser)
       conf.default = paramter.default
     }
     if (paramter.required || (paramter.validates && paramter.validates.required)) {
+      definition.required = definition.required || []
       definition.required.push(paramter.arg)
     }
     acc[paramter.arg] = conf
@@ -348,8 +364,8 @@ PoplarSwaggerAdapter.prototype.parseParamsIn = function (method) {
 PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
   const conf = {
     tags,
-    summary: method.name,
-    description: method.name,
+    summary: method.description,
+    description: method.description,
     verb: method.http.verb,
     name: method.http.verb,
     consumes: config.DEFAULT_CONSUMES,
