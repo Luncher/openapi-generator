@@ -9,7 +9,6 @@ function MongooseSchemaParser () {
 MongooseSchemaParser.prototype.createDefinition = function (description = "") {
   const mapping = Object.create(null)
   mapping.type = 'object'
-  mapping.required = []
   mapping.description = description
   mapping.properties = Object.create(null)
 
@@ -39,6 +38,7 @@ MongooseSchemaParser.prototype.parseObject = function (configure, definition, it
 MongooseSchemaParser.prototype.parseDefault = function (configure, definition, item, prop) {
   Object.assign(configure, TYPE_MAPPING[item.type.toLowerCase()])
   if (item.required) {
+    definition.required = definition.required || []
     definition.required.push(prop)
   }
   configure.description = item.description || "该字段还没有注释"
@@ -85,11 +85,6 @@ MongooseSchemaParser.prototype.parseSchema = function (schema) {
       }
     }
   })
-
-  //skip swagger validate error
-  if (definition.required.length === 0) {
-    delete definition.required
-  }
 
   return definition
 }
