@@ -1,5 +1,8 @@
 const assert = require('assert')
-const config = require('../config');
+const mongoose = require('mongoose')
+const Sequelize = require('sequelize')
+const config = require('../config')
+const Parser = require('../parser')
 const debug = require('debug')('openapi:adapter:poplar')
 
 const DEFAULT_RESPONSE_DEFINITION = {
@@ -56,47 +59,6 @@ function PoplarSwaggerAdapter(options) {
 
 PoplarSwaggerAdapter.prototype.init = function (parser) {
   parser.createDefinition(DEFAULT_RESPONSE_DEFINITION)  
-}
-
-PoplarSwaggerAdapter.prototype.parseMongoSchema = function (root) {
-  const definition = {
-    type: "object",
-    properties: {},
-    required: [],
-    description: root.description || ""
-  }
-
-  Object.keys(root)
-    .forEach(k => {
-      const item = root[k]
-      definition.properties[k] = {}
-      const itemDef = definition.properties[k]
-
-      if (Array.isArray(item)) {
-        itemDef.type = 'array'
-        itemDef.items = this.parseMongoSchema(item[0])
-      } else if (!item.type) {
-        itemDef.type = 'object'
-        const subConfig = this.parseMongoSchema(item)
-        itemDef.properties = subConfig.properties
-      } else {
-        Object.assign(itemDef, config.MONGOOSE_TYPE_MAPPING[item.type.toLowerCase()])
-        if (item.required) {
-          definition.required.push(k)
-        }
-        if (item.description) {
-          itemDef.description = item.description
-        }
-        if (item.default) {
-          itemDef.default = item.default
-        }
-        if (item.enum) {
-          itemDef.enum = item.enum
-        }
-      }
-    })
-
-  return definition
 }
 
 PoplarSwaggerAdapter.prototype.createDefaultDefinition = function (name, description) {
@@ -214,24 +176,40 @@ PoplarSwaggerAdapter.prototype.parseEntity = function (definition, entity) {
 PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
   const responses = Object.assign({}, config.DEFAULT_RESPONSE)
   const entity = method.presenter || (method.notes && method.notes.entity)
-  const schema = method.notes && method.notes.schema
+  const model = method.notes && method.notes.model
   
-  if (!schema && !entity) {
+  if (!model && !entity) {
     debug('using default response')
     return responses
+  }
+
+  function getModelType (model) {
+    if (model instanceof mongoose.Model) {
+      return 'mongoose'
+    } else if (model instanceof Sequelize.Model) {
+      return 'sequelize'
+    }
   }
 
   const self = this
   function createAPIEntity () {
     let definition
-    const definitionName = entity._name
+    let definitionName = entity._name
 
     definition = parser.getDefinition(definitionName)
     if (!definition) {
-      if (schema) {
-        definition = self.parseMongoSchema(schema.obj)
-      } else {
-        definition = self.createDefaultDefinition()
+      switch(getModelType()) {
+        case 'mongoose': {
+          definition = Parser.parseMongoSchema(model)
+          break
+        }
+        case 'sequelize': {
+          definition = Parser.parseSequelizeSchema(model)
+          break
+        }
+        default: {
+          definition = self.createDefaultDefinition()
+        }
       }
       definition.name = definitionName
       definition = self.parseEntity(definition, entity)

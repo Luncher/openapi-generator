@@ -47,8 +47,9 @@ exports.parsePoplar = function (APIRouter, options, cb) {
     // fs.writeFileSync('poplar-test.yaml', spec)
     return process.nextTick(cb, null, spec)
   } else {
-    // fs.outputJsonSync('poplar-test.json', spec)
-    return validateSpec(spec, cb)    
+    fs.outputJsonSync('poplar-test.json', spec)
+    process.exit()
+    // return validateSpec(spec, cb)    
   }
 }
 

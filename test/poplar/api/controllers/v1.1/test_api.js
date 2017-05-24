@@ -12,7 +12,7 @@ userAPI.define('getindex', {
     { arg: 'index', type: 'number', description: '索引', default: 1, required: true },
     { arg: 'images', type: ['string'], description: '图片数组', validates: { required: true } },
   ],
-  notes: { schema: actionModel.schema , entity: userAddrEntity },
+  notes: { model: actionModel , entity: userAddrEntity },
   http: { path: '', verb: 'get' }
 }, function (params, cb) {
   cb(null, "hello world")
