@@ -10,11 +10,12 @@ userAPI.define('getindex', {
   description: 'test api index action',
   accepts: [
     { arg: 'name', type: 'string', description: '名称' },    
+    { arg: 'uid', type: 'string', description: 'uid' },    
     { arg: 'index', type: 'number', description: '索引', default: 1, required: true },
     { arg: 'images', type: ['string'], description: '图片数组', validates: { required: true } },
   ],
   notes: { model: sequelize , entity: userAddrEntity },
-  http: { path: 'user/:uid/favorites', verb: 'get' }
+  http: { path: ':uid', verb: 'get' }
 }, function (params, cb) {
   cb(null, "hello world")
 })
