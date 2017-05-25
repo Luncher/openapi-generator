@@ -14,7 +14,7 @@ userAPI.define('getindex', {
     { arg: 'images', type: ['string'], description: '图片数组', validates: { required: true } },
   ],
   notes: { model: sequelize , entity: userAddrEntity },
-  http: { path: '', verb: 'get' }
+  http: { path: 'user/:uid/favorites', verb: 'get' }
 }, function (params, cb) {
   cb(null, "hello world")
 })
