@@ -254,11 +254,11 @@ PoplarSwaggerAdapter.prototype.parsePathTemplateParams = function (method) {
 PoplarSwaggerAdapter.prototype.parseQueryParams = function (tags, method, parser) {
   const pathParams = this.parsePathTemplateParams(method)
   const queryParams = method.accepts.map(paramter => {
-    const index = pathParams.find(it => it.name === paramter.arg)
+    const index = pathParams.findIndex(it => it.name === paramter.arg)
     const pathParamter = index > -1 ? pathParams.splice(index, 1)[0] : null
     const defaultConf = { in: 'query',
       name: paramter.arg,
-      required: (paramter.required || (paramter.validates && paramter.validates.required) || false)
+      required: (paramter.required || (paramter.validates && !!paramter.validates.required) || false)
     }
     const conf = pathParamter || defaultConf
     if (paramter.description) {
