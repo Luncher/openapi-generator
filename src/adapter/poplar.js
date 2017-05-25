@@ -71,11 +71,9 @@ PoplarSwaggerAdapter.prototype.createDefaultDefinition = function (name, descrip
 }
 
 PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity) {
+  const aliasFields = []  
   const mappings = entity._mappings
   const properties = definition.properties
-
-  
-  const aliasFields = []
   const entityProps = Object.keys(mappings)
   .reduce((props, k) => {
     let type
@@ -153,7 +151,6 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
   return entityProps
 }
 
-
 PoplarSwaggerAdapter.prototype.createDefaultEntity = function () {
   const entity = Object.create(null)
   entity._excepts = ['id']
@@ -165,8 +162,6 @@ PoplarSwaggerAdapter.prototype.createDefaultEntity = function () {
 PoplarSwaggerAdapter.prototype.parseEntity = function (definition, entity) {
   const excepts = entity._excepts.slice()
   const entityProps = this.parseEntityMapping(definition, entity)
-
-  debug('parseEntity')
 
   Object.assign(definition.properties, entityProps)
   definition.properties = Object.keys(definition.properties)
@@ -258,9 +253,9 @@ PoplarSwaggerAdapter.prototype.parsePathTemplateParams = function (method) {
 
 PoplarSwaggerAdapter.prototype.parseQueryParams = function (tags, method, parser) {
   const pathParams = this.parsePathTemplateParams(method)
-
-  return method.accepts.map(paramter => {
-    const pathParamter = pathParams.find(it => it.name === paramter.arg)
+  const queryParams = method.accepts.map(paramter => {
+    const index = pathParams.find(it => it.name === paramter.arg)
+    const pathParamter = index > -1 ? pathParams.splice(index, 1)[0] : null
     const defaultConf = { in: 'query',
       name: paramter.arg,
       required: (paramter.required || (paramter.validates && paramter.validates.required) || false)
@@ -283,6 +278,8 @@ PoplarSwaggerAdapter.prototype.parseQueryParams = function (tags, method, parser
     }
     return conf
   })
+
+  return pathParams.concat(queryParams)
 }
 
 PoplarSwaggerAdapter.prototype.parseBodyParams = function (tags, method, parser) {
@@ -375,10 +372,7 @@ PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
 
   const pathName = '/' + method._apiBuilder.name + 
     (conf.operationId ? ( (conf.operationId.indexOf('/') === 0 ? '' : '/') + conf.operationId) : '')
-  const path = parser.createPath({
-    name: pathName
-  })
-
+  const path = parser.createPath({ name: pathName })
   switch (this.parseParamsIn(method)) {
     case 'query': {
       conf.parameters = this.parseQueryParams(tags, method, parser)
