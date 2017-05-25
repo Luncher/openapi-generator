@@ -130,7 +130,7 @@ PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity
   function getNestedProp (obj, fieldPath) {
     const fields = fieldPath.split('.')
     return fields.reduce((acc, k) => {
-      if (acc.properties) {
+      if (acc && acc.properties) {
         return acc.properties[k]
       }
     }, obj)
