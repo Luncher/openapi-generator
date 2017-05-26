@@ -71,6 +71,15 @@ SWaggerGenerator.prototype.createResponse = function (status, description, defin
   return resp
 }
 
+SWaggerGenerator.prototype.createDefaultDefinition = function () {
+  return {
+    type: "object",
+    properties: {},
+    name,
+    description
+  }
+}
+
 SWaggerGenerator.prototype.createTag = function (options) {
   const configure = this.configure;  
   const tag = new SWaggerGenerator.Tag(options)

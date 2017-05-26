@@ -45,13 +45,6 @@ const DEFAULT_RESPONSE_DEFINITION = {
   }
 }
 
-//||支持普通的entity操作
-// 1. using
-// 2. alias
-// 3. value
-// 4. get
-// 5. description
-
 function PoplarSwaggerAdapter(options) {
   this.options = options
   this.APIRouter = options.APIRouter
@@ -59,123 +52,6 @@ function PoplarSwaggerAdapter(options) {
 
 PoplarSwaggerAdapter.prototype.init = function (parser) {
   parser.createDefinition(DEFAULT_RESPONSE_DEFINITION)  
-}
-
-PoplarSwaggerAdapter.prototype.createDefaultDefinition = function (name, description) {
-  return {
-    type: "object",
-    properties: {},
-    name,
-    description
-  }
-}
-
-PoplarSwaggerAdapter.prototype.parseEntityMapping = function (definition, entity) {
-  const aliasFields = []  
-  const mappings = entity._mappings
-  const properties = definition.properties
-  const entityProps = Object.keys(mappings)
-  .reduce((props, k) => {
-    let type
-    const fieldProp = {}
-    const it = mappings[k]
-    switch(it.act) {
-      case 'alias': {
-        if (it.using) {
-          const entity = it.using
-          fieldProp['$ref'] = '#/definitions/' + entity._name
-        } else {
-          const name = it.value
-          type = (properties[name] && properties[name].type) || it.type
-          aliasFields.push(name)
-        }
-        break
-      }
-      case 'get': {
-        const fieldPath = it.value
-        const value = getNestedProp(definition, fieldPath)
-        if (value) {
-          type = value.type
-        }
-        break
-      }
-      case 'value': {
-        it.default = it.value
-        break
-      }
-      case 'function': {
-        type = it.type
-        break
-      }
-    }
-
-    type = type === 'any' ? 'string': type
-    if (type) {
-      fieldProp.type = type
-    }
-    if (it.description) {
-      fieldProp.description = it.description
-    }
-
-    if (it.default !== null) {
-      fieldProp.default = it.default
-      if (!type) {
-        fieldProp.type = mappingDefaultType(it.default)
-      }
-    }
-    props[k] = fieldProp
-    return props
-  }, {})
-
-  function getNestedProp (obj, fieldPath) {
-    const fields = fieldPath.split('.')
-    return fields.reduce((acc, k) => {
-      if (acc && acc.properties) {
-        return acc.properties[k]
-      }
-    }, obj)
-  }
-
-  function mappingDefaultType (value) {
-    if (value === 0) {
-      return "number"
-    } else if (!value) {
-      return 'string'
-    } else if (Array.isArray(value)) {
-      return 'array'
-    } else {
-      return typeof value
-    }
-  }
-
-  return entityProps
-}
-
-PoplarSwaggerAdapter.prototype.createDefaultEntity = function () {
-  const entity = Object.create(null)
-  entity._excepts = ['id']
-  entity._mappings = {}
-  entity._name = 'The Default Entity'
-  return entity
-}
-
-PoplarSwaggerAdapter.prototype.parseEntity = function (definition, entity) {
-  const excepts = entity._excepts.slice()
-  const entityProps = this.parseEntityMapping(definition, entity)
-
-  Object.assign(definition.properties, entityProps)
-  definition.properties = Object.keys(definition.properties)
-    .filter(k => excepts.indexOf(k) === -1)
-    .reduce((acc, cur) => {
-      acc[cur] = definition.properties[cur]
-      return acc
-    }, {})
-  
-  if (definition.required) {
-    definition.required = definition.required.filter(k => excepts.indexOf(k) === -1)
-  }
-
-  return definition
 }
 
 PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
@@ -220,12 +96,12 @@ PoplarSwaggerAdapter.prototype.parseResponse = function (method, parser) {
           break
         }
         default: {
-          definition = self.createDefaultDefinition()
+          definition = parser.createDefaultDefinition()
         }
       }
 
       definition.name = definitionName
-      definition = self.parseEntity(definition, entity)
+      definition = Parser.parseEntity(definition, entity)
       parser.createDefinition(definition)      
     }
 
@@ -383,9 +259,11 @@ PoplarSwaggerAdapter.prototype.parseMethod = function (tags, method, parser) {
       break
     }
     case 'header': {
+      //TODO
       break
     }
     case 'form': {
+      //TODO      
       break
     }
     default: {

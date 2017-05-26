@@ -44,15 +44,14 @@ exports.parsePoplar = function (APIRouter, options, cb) {
   const spec = generator.generate(adapter)
   if (options.type === 'yaml') {
     debug('if generate yaml then skip validate because of remote server BUG')
-    // fs.writeFileSync('poplar-test.yaml', spec)
+    fs.writeFileSync('poplar-test.yaml', spec)
     return process.nextTick(cb, null, spec)
   } else {
     fs.outputJsonSync('poplar-test.json', spec)
-    process.exit()
-    // return validateSpec(spec, cb)    
+    return validateSpec(spec, cb)   
   }
 }
 
 exports.parseFeathers = function (app, options) {
-
+  //TODO
 }
